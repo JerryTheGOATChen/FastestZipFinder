@@ -50,7 +50,7 @@ class ZipSolver:
                 occupied_cells: set[Tuple[int, int]], 
                 path: List[Tuple[int, int]],
                 all_paths: List[List[Tuple[int, int]]],
-                max_paths: int = 100) -> None:
+                max_paths: int = 500) -> None:
         """
         DFS to find all possible paths from current to goal.
         Limits to max_paths to avoid explosion on large grids.
@@ -146,9 +146,6 @@ class ZipSolver:
         """
         # Start with start and end points already marked
         occupied_cells = set()
-        for start, end in self.pairs:
-            occupied_cells.add(start)
-            occupied_cells.add(end)
         
         # Start recursive solving
         return self.solve_recursive(0, occupied_cells, [])
@@ -159,12 +156,11 @@ class ZipSolver:
             print("No solution found!")
             return
         
-        total_cells_filled = sum(len(path) for path in self.solution_paths)
-        print(f"Solution found with {len(self.solution_paths)} paths:")
-        print(f"Total cells filled: {total_cells_filled}/{self.total_cells}")
-        
+        print("Number of Paths:", len(self.solution_paths))
+
         for i, path in enumerate(self.solution_paths):
-            print(f"  Path {i+1}: {path[0]} -> {path[-1]} ({len(path)} cells)")
+            print("Path", i+1)
+            print(path)
             
     def visualize_solution(self):
         """Visualize the solution on a grid showing path order."""
@@ -172,58 +168,32 @@ class ZipSolver:
             print("No solution to visualize!")
             return
 
-        # Create visual grid
-        visual = [['.' for _ in range(self.cols)] for _ in range(self.rows)]
+        grid = [['.' for _ in range(self.cols)] for _ in range(self.rows)]
 
-        # For single path, show step numbers
         if len(self.solution_paths) == 1:
             path = self.solution_paths[0]
-            for i, pos in enumerate(path):
-                # Use numbers 0-9, then letters A-Z
-                if i < 10:
-                    visual[pos[0]][pos[1]] = str(i)
-                else:
-                    visual[pos[0]][pos[1]] = chr(ord('A') + i - 10)
-        else:
-            # Multiple paths - show which path each cell belongs to
-            path_symbols = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-            for path_idx, path in enumerate(self.solution_paths):
-                symbol = path_symbols[path_idx % len(path_symbols)]
-                for pos in path:
-                    visual[pos[0]][pos[1]] = symbol
-    
-        # Print grid
-        print("\nSolution visualization:")
-        if len(self.solution_paths) == 1:
-            print("(Numbers show the order of movement: 0→1→2→...)")
-        else:
-            print("(Letters show which path each cell belongs to)")
-    
-        for row in visual:
-            print(' '.join(row))
-    
-         # Print detailed path sequences
-        print("\nDetailed path sequences:")
-        for i, path in enumerate(self.solution_paths):
-            print(f"\nPath {i+1}: {len(path)} cells")
-            # Show path as sequence of coordinates
-            path_str = " → ".join([f"({r},{c})" for r, c in path])
-            print(f"  {path_str}")
 
-        # Count empty cells
-        empty_count = sum(1 for row in visual for cell in row if cell == '.')
-        if empty_count > 0:
-            print(f"\n⚠ Warning: {empty_count} cells not filled!")
+            for step_index, (r, c) in enumerate(path):
+                grid[r][c] = str(step_index)  # 0, 1, 2, 3..
         else:
-            print("\n✓ All cells filled!")
+            letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+            for path_index, path in enumerate(self.solution_paths):
+                letter = letters[path_index%len(letters)]
+                for (r, c) in path:
+                    grid[r][c] = letter
+
+        print("Grid Visualization:")
+        for row in grid:
+            print(' '.join(row))
 
 # Test the solver
 if __name__ == "__main__":
     # Simple 3x3 puzzle - guaranteed solvable
     print("=== Test 1: Simple 3x3 grid ===")
-    grid_size = (3, 3)
+    grid_size = (6, 6)
     pairs = [
-        ((0, 0), (2, 2)),  # Top-left to bottom-right
+        ((4, 0), (2, 2)),  # Top-left to bottom-right
         ((0, 2), (2, 0)),  # Top-right to bottom-left
     ]
     walls = set()  # No walls
