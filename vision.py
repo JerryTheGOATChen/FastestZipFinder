@@ -7,10 +7,10 @@ from typing import Tuple, List, Dict, Set, Optional
 
 class ZipVision:
     def __init__(self):
-        self.board_area = None  # (x, y, width, height)
-        self.cell_size = None
-        self.grid_size = None  # (rows, cols)
-        self.cell_positions = {}  # Maps (row, col) -> (screen_x, screen_y)
+        self.board_area: Optional[Tuple[int, int, int, int]] = None  # (x, y, width, height)
+        self.cell_size: Optional[Tuple[float, float]] = None
+        self.grid_size: Optional[Tuple[int, int]] = None  # (rows, cols)
+        self.cell_positions: Dict[Tuple[int, int], Tuple[int, int]] = {}  # Maps (row, col) -> (screen_x, screen_y)
         
     def select_board_area(self):
         """
@@ -66,7 +66,7 @@ class ZipVision:
         
         return img
     
-    def detect_grid_structure(self, img: np.ndarray, expected_size: Tuple[int, int] = None):
+    def detect_grid_structure(self, img: np.ndarray, expected_size: Optional[Tuple[int, int]] = None):
         """
         Detect grid structure by finding lines or using expected size.
         
@@ -74,6 +74,9 @@ class ZipVision:
             img: OpenCV image of the board
             expected_size: (rows, cols) if you know the grid size
         """
+        if not self.board_area:
+            raise ValueError("Board area not set! Call select_board_area() first.")
+        
         height, width = img.shape[:2]
         
         if expected_size:
@@ -107,7 +110,12 @@ class ZipVision:
         """
         if not self.cell_positions:
             raise ValueError("Grid structure not detected! Call detect_grid_structure() first.")
+    
+        if not self.board_area:
+            raise ValueError("Board area not set! Call select_board_area() first.")
         
+        if not self.cell_size:
+            raise ValueError("Cell size not detected! Call detect_grid_structure() first.")
         # Try to import pytesseract for OCR
         try:
             import pytesseract
@@ -184,6 +192,11 @@ class ZipVision:
         """
         Draw the detected grid, numbers, and pairs on the image for debugging.
         """
+        if not self.board_area:
+            raise ValueError("Board area not set!")
+    
+        if not self.grid_size:
+            raise ValueError("Grid size not detected!")
         vis_img = img.copy()
         
         # Draw grid
