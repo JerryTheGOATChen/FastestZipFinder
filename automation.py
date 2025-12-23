@@ -46,8 +46,11 @@ class ZipAutomation:
             if cell not in self.cell_positions:
                 pyautogui.mouseUp(button='left')
                 raise KeyError(f"Cell {cell} not found in position map")
-            pyautogui.moveTo(x, y, duration=move_duration)
-            time.sleep(0.02)  # Small pause between moves
+            x, y = self.cell_positions[cell]
+    
+            print(f"  -> Visiting cell {cell} at ({x}, {y})")  # ADD THIS LINE
+            pyautogui.moveTo(x, y, duration=0.05)
+            time.sleep(move_duration)
         
         # Release mouse
         time.sleep(0.1)

@@ -1,5 +1,10 @@
-from solver import ZipSolver
+"""
+LinkedIn Zip Auto-Solver
+Main integration file that connects vision, solver, and automation
+"""
+
 from vision import ZipVision
+from solver import ZipSolver
 from automation import ZipAutomation
 import time
 
@@ -43,21 +48,16 @@ def main():
     print("\n[STEP 2] NUMBER DETECTION")
     print("-" * 70)
     
-    print("\nAttempting OCR detection...")
-    numbers = vision.detect_numbers_at_cells(img)
+    # Skip OCR, go straight to manual input
+    print("\nUsing manual input mode")
+    print("Enter the number shown in each cell (or press Enter to skip empty cells)")
     
-    # Manual input fallback if OCR fails
-    if not numbers or len(numbers) < 2:
-        print("⚠ OCR detection failed or incomplete")
-        print("\nManual input mode:")
-        print("(Press Enter to skip empty cells)")
-        
-        numbers = {}
-        for row in range(rows):
-            for col in range(cols):
-                num_input = input(f"  Cell ({row},{col}) number: ").strip()
-                if num_input.isdigit():
-                    numbers[(row, col)] = int(num_input)
+    numbers = {}
+    for row in range(rows):
+        for col in range(cols):
+            num_input = input(f"  Cell ({row},{col}) number: ").strip()
+            if num_input.isdigit():
+                numbers[(row, col)] = int(num_input)
     
     print(f"\n✓ Detected {len(numbers)} numbered cells:")
     for cell, num in sorted(numbers.items(), key=lambda x: x[1]):
