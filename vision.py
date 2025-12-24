@@ -188,15 +188,26 @@ class ZipVision:
         return pairs
     
     def visualize_detection(self, img: np.ndarray, numbers: Dict[Tuple[int, int], int], 
-                           pairs: List[Tuple[Tuple[int, int], Tuple[int, int]]]):
+                       pairs: List[Tuple[Tuple[int, int], Tuple[int, int]]],
+                       solution_paths: Optional[List[List[Tuple[int, int]]]] = None):
         """
-        Draw the detected grid, numbers, and pairs on the image for debugging.
+        Draw the detected grid, numbers, pairs, and optionally the solution paths.
+        
+        Args:
+            img: The board image
+            numbers: Dict of cell -> number
+            pairs: List of pairs to connect
+            solution_paths: Optional list of solution paths to visualize
         """
         if not self.board_area:
             raise ValueError("Board area not set!")
-    
+
         if not self.grid_size:
             raise ValueError("Grid size not detected!")
+        
+        if not self.cell_positions:
+            raise ValueError("Cell positions not detected!")
+        
         vis_img = img.copy()
         
         # Draw grid
@@ -212,6 +223,41 @@ class ZipVision:
                 x = int(i * cell_w)
                 cv2.line(vis_img, (x, 0), (x, vis_img.shape[0]), (128, 128, 128), 1)
         
+        # Draw solution paths if provided
+        if solution_paths:
+            colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (255, 0, 255), (0, 255, 255)]
+            
+            for path_idx, path in enumerate(solution_paths):
+                color = colors[path_idx % len(colors)]
+                
+                # Draw lines connecting each step in the path
+                for i in range(len(path) - 1):
+                    start_cell = path[i]
+                    end_cell = path[i + 1]
+                    
+                    start_pos = self.cell_positions[start_cell]
+                    end_pos = self.cell_positions[end_cell]
+                    
+                    # Convert to image coordinates
+                    start_x = start_pos[0] - self.board_area[0]
+                    start_y = start_pos[1] - self.board_area[1]
+                    end_x = end_pos[0] - self.board_area[0]
+                    end_y = end_pos[1] - self.board_area[1]
+                    
+                    # Draw thick line for path
+                    cv2.line(vis_img, (start_x, start_y), (end_x, end_y), color, 3)
+                
+                # Draw circles at path endpoints
+                start_pos = self.cell_positions[path[0]]
+                end_pos = self.cell_positions[path[-1]]
+                start_x = start_pos[0] - self.board_area[0]
+                start_y = start_pos[1] - self.board_area[1]
+                end_x = end_pos[0] - self.board_area[0]
+                end_y = end_pos[1] - self.board_area[1]
+                
+                cv2.circle(vis_img, (start_x, start_y), 8, color, -1)
+                cv2.circle(vis_img, (end_x, end_y), 8, color, 2)
+        
         # Draw numbers at cells
         for cell, number in numbers.items():
             pos = self.cell_positions[cell]
@@ -219,22 +265,23 @@ class ZipVision:
             y = pos[1] - self.board_area[1]
             
             cv2.putText(vis_img, str(number), (x-10, y+10), 
-                       cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
+                    cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
         
-        # Draw pairs with arrows
-        for i, (start, end) in enumerate(pairs):
-            start_pos = self.cell_positions[start]
-            end_pos = self.cell_positions[end]
-            
-            # Convert to image coordinates
-            start_x = start_pos[0] - self.board_area[0]
-            start_y = start_pos[1] - self.board_area[1]
-            end_x = end_pos[0] - self.board_area[0]
-            end_y = end_pos[1] - self.board_area[1]
-            
-            # Draw arrow from start to end
-            cv2.arrowedLine(vis_img, (start_x, start_y), (end_x, end_y), 
-                          (0, 255, 0), 2, tipLength=0.3)
+        # Draw pairs with arrows (only if no solution paths)
+        if not solution_paths:
+            for i, (start, end) in enumerate(pairs):
+                start_pos = self.cell_positions[start]
+                end_pos = self.cell_positions[end]
+                
+                # Convert to image coordinates
+                start_x = start_pos[0] - self.board_area[0]
+                start_y = start_pos[1] - self.board_area[1]
+                end_x = end_pos[0] - self.board_area[0]
+                end_y = end_pos[1] - self.board_area[1]
+                
+                # Draw arrow from start to end
+                cv2.arrowedLine(vis_img, (start_x, start_y), (end_x, end_y), 
+                            (0, 255, 0), 2, tipLength=0.3)
         
         # Show image
         cv2.imshow('Detection Visualization', vis_img)

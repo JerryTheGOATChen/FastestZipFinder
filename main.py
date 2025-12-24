@@ -48,18 +48,37 @@ def main():
     print("\n[STEP 2] NUMBER DETECTION")
     print("-" * 70)
     
-    # Skip OCR, go straight to manual input
-    print("\nUsing manual input mode")
-    print("Enter the number shown in each cell (or press Enter to skip empty cells)")
-    
-    numbers = {}
-    for row in range(rows):
-        for col in range(cols):
-            num_input = input(f"  Cell ({row},{col}) number: ").strip()
-            if num_input.isdigit():
-                numbers[(row, col)] = int(num_input)
-    
-    print(f"\n✓ Detected {len(numbers)} numbered cells:")
+    # Testing
+
+    print("\n Type y if you want to try OCR detection first:")
+    try_ocr = input("  Try OCR? (y/n): ").lower() == 'y'
+    if try_ocr:
+        print("\nAttempting OCR detection...")
+        print("(This requires pytesseract and Tesseract-OCR installed)")
+        numbers = vision.detect_numbers_at_cells(img)
+        if not numbers or len(numbers) < 2:
+            print("OCR detection failed or found too few numbers")
+            print("\nSwitching to manual input mode")
+            print("Enter the number shown in each cell (or press Enter to skip empty cells)")
+        
+            numbers = {}
+            for row in range(rows):
+                for col in range(cols):
+                    num_input = input(f"  Cell ({row},{col}) number: ").strip()
+                    if num_input.isdigit():
+                        numbers[(row, col)] = int(num_input)
+        else:
+            print(f"OCR detected {len(numbers)} numbers successfully")
+    else:
+        print("\nManual input mode")    
+        numbers = {}
+        for row in range(rows):
+            for col in range(cols):
+                num_input = input(f"  Cell ({row},{col}) number: ").strip()
+                if num_input.isdigit():
+                    numbers[(row, col)] = int(num_input)
+
+    print(f"\nDetected {len(numbers)} numbered cells:")
     for cell, num in sorted(numbers.items(), key=lambda x: x[1]):
         print(f"  {num} at {cell}")
     
@@ -68,15 +87,10 @@ def main():
     pairs = vision.identify_pairs_from_numbers(numbers)
     
     if not pairs:
-        print("❌ No valid pairs found! Exiting.")
+        print("No valid pairs found! Exiting.")
         return
     
-    print(f"✓ Created {len(pairs)} pairs")
-    
-    # Optional: Visualize detection
-    visualize = input("\nVisualize detection? (y/n): ").lower()
-    if visualize == 'y':
-        vision.visualize_detection(img, numbers, pairs)
+    print(f"Created {len(pairs)} pairs")
     
     # ========================================================================
     # STEP 3: SOLVE THE PUZZLE
@@ -116,7 +130,7 @@ def main():
     solve_time = time.time() - start_time
     
     if not solution_found:
-        print(f"\n❌ No solution found (took {solve_time:.2f}s)")
+        print(f"\n No solution found (took {solve_time:.2f}s)")
         print("\nPossible reasons:")
         print("  - Incorrect grid size")
         print("  - Wrong number positions")
@@ -127,7 +141,11 @@ def main():
     print(f"\n✓ Solution found in {solve_time:.2f}s!")
     solver.print_solution()
     solver.visualize_solution()
-    
+
+    # Visualize detection with solution paths
+    visualize = input("\nVisualize detection with solution paths? (y/n): ").lower()
+    if visualize == 'y':
+        vision.visualize_detection(img, numbers, pairs, solver.solution_paths)
     # ========================================================================
     # STEP 4: AUTOMATION - Draw the solution
     # ========================================================================
@@ -179,6 +197,6 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("\n\n⚠ Interrupted by user")
     except Exception as e:
-        print(f"\n\n❌ Error occurred: {e}")
+        print(f"\n\n Error occurred: {e}")
         import traceback
         traceback.print_exc()
