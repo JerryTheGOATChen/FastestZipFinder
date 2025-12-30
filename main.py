@@ -145,7 +145,7 @@ def main():
     # Visualize detection with solution paths
     visualize = input("\nVisualize detection with solution paths? (y/n): ").lower()
     if visualize == 'y':
-        vision.visualize_detection(img, numbers, pairs, solver.solution_paths)
+        vision.visualize_detection(img, numbers, pairs, solver.solution_path)
     # ========================================================================
     # STEP 4: AUTOMATION - Draw the solution
     # ========================================================================
@@ -160,11 +160,11 @@ def main():
     
     # Settings
     print("\nAutomation settings:")
-    drag_speed = input("  Drag speed (0.05=fast, 0.2=slow) [default: 0.1]: ").strip()
-    drag_speed = float(drag_speed) if drag_speed else 0.1
+    drag_speed = input("  Drag speed (0.01=fast, 0.1=slow) [default: 0.05]: ").strip()
+    drag_speed = float(drag_speed) if drag_speed else 0.05
     
-    pause_time = input("  Pause between paths (seconds) [default: 0.5]: ").strip()
-    pause_time = float(pause_time) if pause_time else 0.5
+    pause_time = input("  Pause between paths (seconds) [default: 0.1]: ").strip()
+    pause_time = float(pause_time) if pause_time else 0.1
     
     # Create automation and draw
     automation = ZipAutomation(vision.cell_positions)
@@ -178,7 +178,7 @@ def main():
     
     if ready == 'yes':
         automation.draw_all_paths(
-            solver.solution_paths,
+            solver.solution_path,
             pause_between_paths=pause_time,
             move_duration=drag_speed
         )

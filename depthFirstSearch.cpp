@@ -20,6 +20,7 @@ class Graph
 		void recursivePreOrder(int x);
 		void recursivePostOrder(int x);
 		void iterativePreOrder(int x);
+		bool hamiltonDFS(int x);
 };
 
 Graph::Graph(int elements)
@@ -70,6 +71,11 @@ void Graph::iterativePreOrder(int x)
 	stack<int> st;
 	
 	st.push(x);
+	
+}
+
+bool Graph::hamiltonDFS(int x)
+{
 	
 }
 

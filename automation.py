@@ -15,9 +15,9 @@ class ZipAutomation:
         pyautogui.FAILSAFE = True
 
         #Allows reasonable speed, can be adjusted
-        pyautogui.PAUSE = 0.05 #50ms between actions
+        pyautogui.PAUSE = 0.01 #10ms between actions
 
-    def draw_path(self, path: List[Tuple[int, int]], move_duration: float = 0.1):
+    def draw_path(self, path: List[Tuple[int, int]], move_duration: float = 0.05):
         """
         Draw a single path by clicking and dragging through cells
 
@@ -53,24 +53,23 @@ class ZipAutomation:
             time.sleep(move_duration)
         
         # Release mouse
-        time.sleep(0.1)
+        time.sleep(0.05)
         pyautogui.mouseUp(button='left')
         
         print(f"✓ Path drawn: {path[0]} → {path[-1]}")
 
-    def draw_all_paths(self, solution_paths: List[List[Tuple[int, int]]], pause_between_paths: float = 0.5, move_duration: float = 0.1):
+    def draw_all_paths(self, solution_path: List[Tuple[int, int]], pause_between_paths: float = 0.5, move_duration: float = 0.05):
         """
         Draw all solution paths with pauses between them.
         
         Args:
-            solution_paths: List of paths from solver
+            solution_path: Path from solver
             pause_between_paths: Seconds to wait between drawing each path
             move_duration: Speed of drag movements (lower = slower)
         """
         print(f"\n{'='*60}")
         print(f"AUTO-SOLVING ZIP PUZZLE")
         print(f"{'='*60}")
-        print(f"Total paths to draw: {len(solution_paths)}")
         print(f"\n SAFETY: Move mouse to corner to abort!")
         print("Starting in 3 seconds...")
         
@@ -80,17 +79,16 @@ class ZipAutomation:
         
         print("\n Starting automation!\n")
         
-        for i, path in enumerate(solution_paths):
-            print(f"\n--- Path {i+1}/{len(solution_paths)} ---")
-            try:
-                self.draw_path(path, move_duration=move_duration)
-            except pyautogui.FailSafeException:
-                print("Automation aborted by failsafe")
-                return
+        print(f"\n--- Path ---")
+        try:
+            self.draw_path(solution_path, move_duration=move_duration)
+        except pyautogui.FailSafeException:
+            print("Automation aborted by failsafe")
+            return
             
-            if i < len(solution_paths) - 1:
-                print(f"Pausing {pause_between_paths}s before next path...")
-                time.sleep(pause_between_paths)
+        if i < len(solution_path) - 1:
+            print(f"Pausing {pause_between_paths}s before next path...")
+            time.sleep(pause_between_paths)
         
         print(f"\n{'='*60}")
         print("✓ ALL PATHS DRAWN SUCCESSFULLY!")
