@@ -85,7 +85,7 @@ class ZipSolver:
         
         #Base Case: Checks if all nodes visited and all cells filled
         if len(visited) == self.total_cells:
-            if next_node_index == len(self.nodes):
+            if current == self.nodes[-1]:
                 self.solution_path = path.copy()
                 return True
             return False
