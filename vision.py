@@ -153,6 +153,53 @@ class ZipVision:
         
         return numbers
     
+    def detect_walls(self, img: np.ndarray) -> Set[Tuple[Tuple[int, int], Tuple[int, int]]]:
+        """
+        Detect walls between cells.
+        Returns set of wall edges: {((r1, c1), (r2, c2)), ...}
+        """
+        if not self.cell_size or not self.grid_size:
+            return set()
+        
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        
+        # Detect black lines (walls are black)
+        _, binary = cv2.threshold(gray, 50, 255, cv2.THRESH_BINARY_INV)
+        
+        walls = set()
+        cell_w, cell_h = self.cell_size
+        rows, cols = self.grid_size
+        
+        # Check horizontal edges
+        for row in range(rows - 1):
+            for col in range(cols):
+                # Sample middle of edge between (row, col) and (row+1, col)
+                sample_x = int(col * cell_w + cell_w * 0.5)
+                sample_y = int((row + 1) * cell_h)
+                
+                if 0 <= sample_y < binary.shape[0] and 0 <= sample_x < binary.shape[1]:
+                    # Check if there's a thick black line
+                    region = binary[max(0, sample_y-5):min(binary.shape[0], sample_y+5), 
+                                   max(0, sample_x-10):min(binary.shape[1], sample_x+10)]
+                    if region.size > 0 and region.mean() > 150:  # Mostly white (wall)
+                        walls.add(((row, col), (row + 1, col)))
+        
+        # Check vertical edges
+        for row in range(rows):
+            for col in range(cols - 1):
+                # Sample middle of edge between (row, col) and (row, col+1)
+                sample_x = int((col + 1) * cell_w)
+                sample_y = int(row * cell_h + cell_h * 0.5)
+                
+                if 0 <= sample_y < binary.shape[0] and 0 <= sample_x < binary.shape[1]:
+                    region = binary[max(0, sample_y-10):min(binary.shape[0], sample_y+10),
+                                   max(0, sample_x-5):min(binary.shape[1], sample_x+5)]
+                    if region.size > 0 and region.mean() > 150:  # Mostly white (wall)
+                        walls.add(((row, col), (row, col + 1)))
+        
+        print(f"Detected {len(walls)} walls")
+        return walls
+
     def identify_pairs_from_numbers(self, numbers: Dict[Tuple[int, int], int]) -> List[Tuple[Tuple[int, int], Tuple[int, int]]]:
         """
         Create pairs from numbered nodes: n → n+1

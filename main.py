@@ -56,6 +56,8 @@ def main():
         print("\nAttempting OCR detection...")
         print("(This requires pytesseract and Tesseract-OCR installed)")
         numbers = vision.detect_numbers_at_cells(img)
+        #Fix this later
+        walls = vision.detect_walls(img)
         if not numbers or len(numbers) < 2:
             print("OCR detection failed or found too few numbers")
             print("\nSwitching to manual input mode")
@@ -97,7 +99,7 @@ def main():
     # ========================================================================
     print("\n[STEP 3] SOLVING PUZZLE")
     print("-" * 70)
-    
+    '''  ADD BACK IN LATER
     # Ask about walls
     has_walls = input("\nDoes the puzzle have walls? (y/n): ").lower()
     walls = set()
@@ -119,7 +121,7 @@ def main():
                     print("  ⚠ Invalid format")
             except ValueError:
                 print("  ⚠ Invalid format")
-    
+    '''
     # Create solver and solve
     print(f"\nSolving {rows}x{cols} grid with {len(pairs)} pairs...")
     solver = ZipSolver((rows, cols), pairs, walls if walls else None)
