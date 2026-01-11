@@ -48,21 +48,19 @@ def main():
     print("\n[STEP 2] NUMBER DETECTION")
     print("-" * 70)
     
-    # Testing
-
-    print("\n Type y if you want to try OCR detection first:")
+    print("\nType y if you want to try OCR detection first:")
     try_ocr = input("  Try OCR? (y/n): ").lower() == 'y'
+    
     if try_ocr:
         print("\nAttempting OCR detection...")
         print("(This requires pytesseract and Tesseract-OCR installed)")
         numbers = vision.detect_numbers_at_cells(img)
-        #Fix this later
-        walls = vision.detect_walls(img)
+        
         if not numbers or len(numbers) < 2:
             print("OCR detection failed or found too few numbers")
             print("\nSwitching to manual input mode")
             print("Enter the number shown in each cell (or press Enter to skip empty cells)")
-        
+            
             numbers = {}
             for row in range(rows):
                 for col in range(cols):
@@ -95,33 +93,71 @@ def main():
     print(f"Created {len(pairs)} pairs")
     
     # ========================================================================
-    # STEP 3: SOLVE THE PUZZLE
+    # STEP 3: WALL DETECTION (OPTIONAL)
     # ========================================================================
-    print("\n[STEP 3] SOLVING PUZZLE")
+    print("\n[STEP 3] WALL DETECTION")
     print("-" * 70)
-    '''  ADD BACK IN LATER
-    # Ask about walls
-    has_walls = input("\nDoes the puzzle have walls? (y/n): ").lower()
+    
+    # Initialize walls as empty set
     walls = set()
     
+    has_walls = input("\nDoes the puzzle have walls? (y/n): ").lower()
+    
     if has_walls == 'y':
-        print("\nEnter walls as: row1,col1,row2,col2 (adjacent cells)")
-        print("(Press Enter when done)")
-        while True:
-            wall_input = input("  Wall: ").strip()
-            if not wall_input:
-                break
-            try:
-                parts = [int(x.strip()) for x in wall_input.split(',')]
-                if len(parts) == 4:
-                    wall = ((parts[0], parts[1]), (parts[2], parts[3]))
-                    walls.add(wall)
-                    print(f"  ✓ Added wall: {wall}")
+        # Try automatic wall detection first
+        try_auto_walls = input("Try automatic wall detection? (y/n): ").lower()
+        
+        if try_auto_walls == 'y':
+            print("\nAttempting automatic wall detection...")
+            detected_walls = vision.detect_walls(img)
+            
+            if detected_walls:
+                print(f"✓ Detected {len(detected_walls)} walls")
+                for wall in detected_walls:
+                    print(f"  Wall: {wall[0]} ↔ {wall[1]}")
+                
+                use_detected = input("\nUse these detected walls? (y/n): ").lower()
+                if use_detected == 'y':
+                    walls = detected_walls
                 else:
-                    print("  ⚠ Invalid format")
-            except ValueError:
-                print("  ⚠ Invalid format")
-    '''
+                    print("Skipping automatic detection, switching to manual input")
+            else:
+                print("No walls detected automatically")
+                print("Switching to manual input")
+        
+        # Manual wall input if needed
+        if not walls:
+            print("\nManual wall input mode")
+            print("Enter walls as: row1,col1,row2,col2 (adjacent cells)")
+            print("Example: 0,0,0,1 means wall between (0,0) and (0,1)")
+            print("(Press Enter when done)")
+            
+            while True:
+                wall_input = input("  Wall: ").strip()
+                if not wall_input:
+                    break
+                try:
+                    parts = [int(x.strip()) for x in wall_input.split(',')]
+                    if len(parts) == 4:
+                        wall = ((parts[0], parts[1]), (parts[2], parts[3]))
+                        walls.add(wall)
+                        print(f"  ✓ Added wall: {wall}")
+                    else:
+                        print("  ⚠ Invalid format (need 4 numbers)")
+                except ValueError:
+                    print("  ⚠ Invalid format (need numbers)")
+    
+    if walls:
+        print(f"\nUsing {len(walls)} walls for solving")
+    else:
+        print("\nNo walls - puzzle has open grid")
+    
+    # ========================================================================
+    # STEP 4: SOLVE THE PUZZLE
+    # ========================================================================
+    print("\n[STEP 4] SOLVING PUZZLE")
+    print("-" * 70)
+    
     # Create solver and solve
     print(f"\nSolving {rows}x{cols} grid with {len(pairs)} pairs...")
     solver = ZipSolver((rows, cols), pairs, walls if walls else None)
@@ -132,7 +168,7 @@ def main():
     solve_time = time.time() - start_time
     
     if not solution_found:
-        print(f"\n No solution found (took {solve_time:.2f}s)")
+        print(f"\n✗ No solution found (took {solve_time:.2f}s)")
         print("\nPossible reasons:")
         print("  - Incorrect grid size")
         print("  - Wrong number positions")
@@ -148,10 +184,11 @@ def main():
     visualize = input("\nVisualize detection with solution paths? (y/n): ").lower()
     if visualize == 'y':
         vision.visualize_detection(img, numbers, pairs, solver.solution_path)
+    
     # ========================================================================
-    # STEP 4: AUTOMATION - Draw the solution
+    # STEP 5: AUTOMATION - Draw the solution
     # ========================================================================
-    print("\n[STEP 4] AUTOMATION")
+    print("\n[STEP 5] AUTOMATION")
     print("-" * 70)
     
     auto_draw = input("\nAutomatically draw solution? (y/n): ").lower()
@@ -165,7 +202,7 @@ def main():
     drag_speed = input("  Drag speed (0.01=fast, 0.1=slow) [default: 0.05]: ").strip()
     drag_speed = float(drag_speed) if drag_speed else 0.05
     
-    pause_time = input("  Pause between paths (seconds) [default: 0.1]: ").strip()
+    pause_time = input("  Pause at each cell (seconds) [default: 0.1]: ").strip()
     pause_time = float(pause_time) if pause_time else 0.1
     
     # Create automation and draw
@@ -179,10 +216,10 @@ def main():
     ready = input("\nReady to start? (yes to proceed): ").lower()
     
     if ready == 'yes':
-        automation.draw_all_paths(
+        automation.draw_path(
             solver.solution_path,
-            pause_between_paths=pause_time,
-            move_duration=drag_speed
+            move_duration=drag_speed,
+            pause_at_cell=pause_time
         )
         print("\n🎉 Puzzle solved automatically!")
     else:
@@ -191,14 +228,3 @@ def main():
     print("\n" + "=" * 70)
     print("Program complete!")
     print("=" * 70)
-
-
-if __name__ == "__main__":
-    try:
-        main()
-    except KeyboardInterrupt:
-        print("\n\n⚠ Interrupted by user")
-    except Exception as e:
-        print(f"\n\n Error occurred: {e}")
-        import traceback
-        traceback.print_exc()

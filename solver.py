@@ -135,12 +135,7 @@ class ZipSolver:
         if not self.solution_path:
             print("No solution found!")
             return
-        
-        print("Number of Paths:", len(self.solution_path))
-
-        for i, path in enumerate(self.solution_path):
-            print("Path", i+1)
-            print(path)
+        print(self.solution_path)
 
     def get_solution_path(self) -> List[Tuple[int, int]]:
        return self.solution_path
