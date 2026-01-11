@@ -2,12 +2,12 @@
 LinkedIn Zip Auto-Solver
 Main integration file that connects vision, solver, and automation
 """
-
+print ("Starting it up")
 from vision import ZipVision
 from solver import ZipSolver
 from automation import ZipAutomation
 import time
-
+print("IMports done")
 def main():
     print("=" * 70)
     print("LINKEDIN ZIP AUTO-SOLVER")
@@ -228,3 +228,13 @@ def main():
     print("\n" + "=" * 70)
     print("Program complete!")
     print("=" * 70)
+
+if __name__ == "__main__":
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\n\n⚠ Interrupted by user")
+    except Exception as e:
+        print(f"\n\n✗ Error occurred: {e}")
+        import traceback
+        traceback.print_exc()
