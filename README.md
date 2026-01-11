@@ -183,6 +183,7 @@ def find_hamiltonian_path(current, visited, path, next,_node_idx)
 - [ ] Faster solving with better pruning
 - [ ] Improved OCR detection
 - [ ] Allows for removed cells
+- [ ] Look into bit masking to improve time complexity
 ## License
 
 Educational project - use at your own risk. Not affiliated with LinkedIn.
