@@ -1,189 +1,107 @@
 # LinkedIn Zip Auto-Solver
 
 What started as a friendly race between my friends and me to see who could crack each LinkedIn Zip puzzle the fastest quickly turned into a 3AM “there has to be a way to guarantee first place” experiment.
-That experiment became a fully automated solver powered by computer vision, Hamiltonian path algorithms, and  mouse automation. It detects the puzzle, computes the optimal path, and completes it instantly, no human reflexes required!
+That experiment became a fully automated solver powered by computer vision, Hamiltonian path algorithms, and keyboard/mouse automation. It spots the puzzle on screen, computes the path, and plays it instantly, no human reflexes required!
 
 ## Features
-- **Hamiltonian Path Solver**: Finds optimal path that traverses every node exactly once in the required order
-- **Automation**: Draws solution automatically with the mouse controlled by the program
-- **Vision System**: Detects board, cells, numbers (OCR Detection), and walls 
+- **Vision System**: Finds the board on screen and reads the grid size, numbers (OCR) and walls, nothing to type in
+- **Hamiltonian Path Solver**: Finds the path that covers every cell exactly once and hits the numbers in order
+- **Automation**: Plays the solution into the game with the arrow keys (or by dragging the mouse)
 
-## Requirements
+## Setup
+Requires Python 3.10+.
+
+```powershell
+py -m pip install -r requirements.txt
 ```
-pyautogui
-opencv
-pillow
-numpy
-Optional (for ocr)
-pytesseract
-```
+
+Number reading uses [Tesseract-OCR](https://github.com/UB-Mannheim/tesseract/wiki), which has to be installed separately. It is picked up from `PATH` or from `C:\Program Files\Tesseract-OCR`. Without it the program asks you to type the numbers in.
+
+## Usage
+1. Open [linkedin.com/games/zip](https://www.linkedin.com/games/zip/) in your browser, stop at the "Start game" screen
+2. Run the solver in a terminal that does not cover the board:
+    ```powershell
+    py main.py
+    ```
+3. Click "Start game"
+
+The solver watches the screen, and as soon as the board shows up it reads it, solves it, clicks the `1` and steers the path with the arrow keys. Don't touch the mouse or keyboard until it is done (about a second). Slam the mouse into the top-left corner of the screen to abort.
+
+### Options
+| Option | What it does |
+| --- | --- |
+| `--dry-run` | Find and solve the board, print the solution, leave the mouse and keyboard alone |
+| `--mouse` | Drag the path with the mouse instead of using the arrow keys |
+| `--step SECONDS` | Pause between moves (default `0.02`). Raise it if the game misses moves |
+| `--timeout SECONDS` | How long to wait for a board to show up (default `60`) |
+| `--image FILE` | Read the board from a screenshot file instead of the screen (never plays) |
+| `--debug` | Save a picture of what was detected to `zip_debug.png` |
 
 ## Project Structure
 ```
 FastestZipFinder/
-├── main.py             # Main integration script
-├── vision.py           # Board capture and detection
+├── main.py             # Command line, ties the three parts together
+├── vision.py           # Screen capture, board/number/wall detection
 ├── solver.py           # Hamiltonian path solver
-├── automation.py       # Mouse control and drawing
+├── automation.py       # Keyboard and mouse control
+├── tests/              # Unit tests and real board screenshots
+├── requirements.txt
 ├── README.md
 ```
 
 ## How It Works
 ### 1. Vision System (`vision.py`)
-- Captures a screenshot of a game board
-- Detects grid structure by dividing board into cells
-- Uses OCR to read numbers inside of cells
-- Detects walls by identifying thick black lines
+- Screenshots the desktop
+- Keeps only long straight dark lines, then looks for a square group of evenly spaced ones: that is the board, and the number of lines gives the grid size
+- A cell with a black disc in the middle holds a number, which is cut out and read with OCR. The numbers must come out as 1..N with no repeats, otherwise the unclear ones are asked for
+- An edge between two cells with a thick black bar on it is a wall
 
-### 2. Solver ('solver.py')
-Uses a **Hamiltonian Path Algorithm**
-- Hamiltonian path visits each cell exactly once
-- Essentially DFS with following constraints:
-    - Must visit number nodes in order (1->2->3->...)
-    - Must visit ALL cells
-    - Cannot cross walls
-    - Must end at final node
+### 2. Solver (`solver.py`)
+A **Hamiltonian path** visits each cell exactly once. The solver is a depth first search with backtracking from node 1 under these constraints:
+- Must visit number nodes in order (1->2->3->...)
+- Must visit ALL cells
+- Cannot cross walls
+- Must end at the final node
 
-**Algorithm**: Depth First Search with backtracking
-- Start at node 1
-- Visit each neighbour recursively
-- Enforce node ordering (ie can't skip nodes)
-- Backtrack if dead-end
-- Time complexity: O(n!) in worst case, pruning helps
+Plain DFS is O(n!) in the worst case, so each step first checks that the unvisited cells can still be covered, and backtracks straight away if not:
+- **Colouring**: on a checkerboard every step changes colour, so the counts of unvisited cells of each colour have to match
+- **Reachability**: the next number must be reachable without stepping on a later one
+- **Links**: every unvisited cell still needs two free neighbours (one for the final node), and cells with no neighbours to spare force their neighbours' choices
+- **Cut cells**: a cell that is the only way into a pocket of the board can be crossed once, so the pocket behind it has to hold the end of the path
 
-### 3. Automation ('automation.py')
-- Moves mouse to each cell position
-- Holds left mouse button down
-- Drags through the entire solution path
-- Slight pause at each cell to ensure game registers it
+The visited set is a bitmask, so these checks are a handful of integer operations. A search that guesses wrong early can still get lost, so each attempt has a step budget and restarts from the other end of the path with a different tie-break when it runs out. 6x6 and 7x7 boards solve in a few milliseconds.
 
-## Usage
-### Basic Usage
+### 3. Automation (`automation.py`)
+- Clicks the `1` cell to focus the board, then presses one arrow key per step of the path
+- With `--mouse`: holds the left button down and drags through every cell instead
+
+## Tests
 ```powershell
-py main.py
+py -m unittest
 ```
+The vision tests run against real screenshots of the game in `tests/fixtures`.
 
-### Step-by-Step
-1. **Board Selection**
-    - Position mouse at top-left corner
-    - Press Enter
-    - Position mouse at bottom right corner
-    - Press Enter
+## Troubleshooting
 
-2. **Grid Size**
-    - Enter number of rows
-    - Enter number of columns
+### "No fresh Zip board found"
+- The whole board has to be visible on screen, not covered by the terminal
+- LinkedIn has to be in its light theme
+- The board must not have a path on it yet, press Reset in the game
+- Run `py main.py --dry-run --debug` and look at `zip_debug.png`
 
-3. **Number Detection**
-    - OCR attempts automatic detection
-    - Falls back to manual input if needed
-        - Enter number for each cell (or enter to skip)
+### Numbers are misread
+- Zoom the browser in, bigger digits read better
+- Check that Tesseract-OCR is installed
 
-4. **Wall Detection**
-    - System automatically detects walls
-    - Fall back to manual input
-        - Wall is defined as two adjacent cells
-
-5. **Solving**
-    - Algorithm finds Hamiltonian path
-    - Shows solution visualization
-
-6. **Automation**
-    - Confirm you're ready
-    - Mouse automatically draws solution
-    - Move mouse to corner to abort (failsafe)
-
-## Configuration
-
-### Automation Speed
-When prompted adjust:
-- **Drag speed**: `0.05` = fast, `0.2` = slow (how long to pause at each cell)
-
-## Algorithm Details
-
-### Hamiltonian Path constraints
-```python
-def find_hamiltonian_path(current, visited, path, next,_node_idx)
-    # Base case: visited all cells?
-    if len(visited) == total_cells:
-        if current == last_node:
-            return True  # Solution found!
-    
-    # Try each neighbor
-    for neighbor in get_neighbors(current):
-        if neighbor not in visited:
-            # Constraint: can't skip nodes
-            if neighbor is future_node and not next_node:
-                continue
-            
-            # Explore
-            visited.add(neighbor)
-            if find_hamilton_path(neighbor, ...):
-                return True
-            visited.remove(neighbor)  # Backtrack
-    
-    return False
-```
-
-### Why Hamiltonian Path?
-**Old Approach**: Find seperate paths for each pair, and combine them
-- Complex back tracking
-- Multiple path conflicts
-- Hard to ensure all cells filled
-
-**New Approach**: One path through all cells
-- Simpler algorithm
-- Naturally fills all cells
-- Fewer Conflicts
-
-## Trouble Shooting
-
-### OCR Not Working
-- Install Tesseract-OCR and pytesseract
-- Use manual input fallback
-- Ensure numbers are clearly visible
-
-### Improving OCR
-1. Ensure game is clearly visible
-2. Use full screen or large window
-3. Good contrast between numbers and background
-4. Install Tesseract-OCR for better results
-
-### Automation Not Accurate
-- Slow down drag speed (increase to 0.2-0.3)
-- Be more precise when selecting board corners
-- Ensure game window doesn't move
-
-### Solver Too Slow
-- Reduce grid size (smaller puzzles)
-- Increase `max_paths` limit in solver
-- Use simpler puzzle first to test
-
-### Mouse Lands Off-Center
-- Reselect board area more carefully
-- Make sure game window is stationary
-- Check if cell size calculation is accurate
-
-## Safety Features
-
-- **Failsafe**: Move mouse to screen corner to abort
-- **Preview mode**: Visualize detection before solving
-- **Manual input**: Always available if OCR fails
-- **Validation**: Checks solution before drawing
+### The game misses moves
+- Raise the pause, e.g. `--step 0.05`
+- Make sure nothing else grabs the keyboard focus while it plays
 
 ## Known Limitations
+- Light theme only
+- The board has to be a square grid with no path drawn yet
+- Mixed-DPI multi monitor setups may put the click in the wrong place, keep the game on the primary monitor
 
-- Grid must be rectangular (no irregular shapes)
-- Walls must be thick black lines
-- Requires Python 3.9+
-
-## Future Improvements
-
-- [ ] Automatic grid size detection
-- [ ] Faster solving with better pruning
-- [ ] Improved OCR detection
-- [ ] Allows for removed cells
-- [ ] Look into bit masking to improve time complexity
 ## License
 
 Educational project - use at your own risk. Not affiliated with LinkedIn.
@@ -195,11 +113,3 @@ Built using:
 - PyAutoGUI for automation
 - Tesseract for OCR
 - NumPy for numerical operations
-
-## Contributing
-
-Improvements welcome! Focus areas:
-- Better OCR accuracy
-- Faster solving algorithm
-- More robust wall detection
-- UI improvements
